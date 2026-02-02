@@ -1,0 +1,33 @@
+{
+  "name": "your-project-name",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@google/genai": "^1.30.0",
+    "aws-sdk": "^2.1692.0",
+    "axios": "^1.7.9",
+    "body-parser": "^2.2.0",
+    "cheerio": "^1.0.0",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "googleapis": "^144.0.0",
+    "groq-sdk": "^0.15.0",
+    "moment-timezone": "^0.5.47",
+    "mongodb": "^7.0.0",
+    "mongoose": "^8.9.5",
+    "node-fetch": "2",
+    "nodemailer": "^6.10.0",
+    "openai": "^4.83.0",
+    "pg": "^8.12.0"
+  }
+}

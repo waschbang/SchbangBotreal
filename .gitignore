@@ -1,0 +1,54 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment Variables
+.env
+
+# Firebase Service Account Key
+serviceAccountKey.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.sublime-workspace
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Build Files
+dist/
+build/
+
+# Coverage Reports
+coverage/
+
+# MacOS Specific
+*.DS_Store
+
+# Linux Specific
+*~
+
+# Windows Specific
+*.ini
+Thumbs.db
