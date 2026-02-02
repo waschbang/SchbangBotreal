@@ -10,6 +10,10 @@ yarn-error.log*
 # Firebase Service Account Key
 serviceAccountKey.json
 
+# Google Service Account Key
+service-account.json
+service-account*.json
+
 # Logs
 logs/
 *.log

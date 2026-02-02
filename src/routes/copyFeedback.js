@@ -1,15 +1,11 @@
 const express = require("express");
 const { google } = require("googleapis");
-const path = require("path");
+const { getGoogleSheets } = require("../lib/googleAuth");
 const { getActiveSpreadsheetId, getPreviousSpreadsheetId } = require("../config/spreadsheetCycle");
 
 const router = express.Router();
 
-const SERVICE_ACCOUNT_FILE = path.join(__dirname, "../service-account.json");
-const scopes = ["https://www.googleapis.com/auth/spreadsheets"]; 
-
-const auth = new google.auth.GoogleAuth({ keyFile: SERVICE_ACCOUNT_FILE, scopes });
-const sheets = google.sheets({ version: "v4", auth });
+const sheets = getGoogleSheets();
 
 const normalizeNumber = (num) => (num ? String(num).replace(/\D/g, "").slice(-10) : "");
 const t = (v) => (v === undefined || v === null ? "" : String(v).trim());

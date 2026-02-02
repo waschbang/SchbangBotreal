@@ -1,18 +1,10 @@
 const express = require("express");
 const { google } = require("googleapis");
 const moment = require("moment-timezone");
-const path = require("path");
+const { getGoogleSheets } = require("../lib/googleAuth");
 
 const router = express.Router();
-const SERVICE_ACCOUNT_FILE = path.join(__dirname, "../service-account.json");
-const scopes = ["https://www.googleapis.com/auth/spreadsheets"];
-
-const auth = new google.auth.GoogleAuth({
-  keyFile: SERVICE_ACCOUNT_FILE,
-  scopes: scopes,
-});
-
-const sheets = google.sheets({ version: "v4", auth });
+const sheets = getGoogleSheets();
 
 const SPREADSHEET_ID = "1pmkj8M1FCizk41IlzEnPcnISf6iXd3Ssm7DwwGh60kQ";
 const CLIENT_DATA_RANGE = "BrandInfo!A:F";

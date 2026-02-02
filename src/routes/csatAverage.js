@@ -1,18 +1,10 @@
 const express = require("express");
 const { google } = require("googleapis");
-const path = require("path");
+const { getGoogleSheets } = require("../lib/googleAuth");
 
 const router = express.Router();
 
-const SERVICE_ACCOUNT_FILE = path.join(__dirname, "../service-account.json");
-const scopes = ["https://www.googleapis.com/auth/spreadsheets"];
-
-const auth = new google.auth.GoogleAuth({
-  keyFile: SERVICE_ACCOUNT_FILE,
-  scopes: scopes,
-});
-
-const sheets = google.sheets({ version: "v4", auth });
+const sheets = getGoogleSheets();
 const SPREADSHEET_ID = "1OWtO8jYeNFwTpF6movC3o2xDkXlSohTPowiJVYq4cXY";
 
 // Sheets and column mappings based on the actual sheet structure

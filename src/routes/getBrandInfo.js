@@ -1,19 +1,11 @@
 const express = require("express");
 const { google } = require("googleapis");
-const path = require("path");
+const { getGoogleSheets } = require("../lib/googleAuth");
  const { getActiveSpreadsheetId, getPreviousSpreadsheetId } = require("../config/spreadsheetCycle");
 
 const router = express.Router();
 
-const SERVICE_ACCOUNT_FILE = path.join(__dirname, "../service-account.json");
-const scopes = ["https://www.googleapis.com/auth/spreadsheets"];
-
-const auth = new google.auth.GoogleAuth({
-  keyFile: SERVICE_ACCOUNT_FILE,
-  scopes: scopes,
-});
-
-const sheets = google.sheets({ version: "v4", auth });
+const sheets = getGoogleSheets();
 const SPREADSHEET_ID = getActiveSpreadsheetId(); // Active spreadsheet for current cycle
 const RANGE = "BrandInfo!A:R"; // Columns through 'Done' (R)
 
