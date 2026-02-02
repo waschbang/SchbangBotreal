@@ -102,6 +102,7 @@ const serviceHeaderNames = {
   seo: "SEO",
   martech: "MarTech",
   fluence: "Fluence",
+  markaas: "Markaas",
   smp: "SMP",
 };
 
@@ -118,19 +119,25 @@ function indexToA1Col(idx0) {
 
 // Detect the correct Filled column dynamically from BrandInfo headers for the given service
 async function getFilledColumnForService(spreadsheetId, serviceKey) {
+  console.log("[markServiceFilled] getFilledColumnForService:", { spreadsheetId, serviceKey });
   const headersResp = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range: "BrandInfo!A1:Q1",
   });
   const headers = (headersResp.data.values && headersResp.data.values[0]) || [];
+  console.log("[markServiceFilled] BrandInfo headers:", headers);
+  
   const svcHeader = serviceHeaderNames[serviceKey];
+  console.log("[markServiceFilled] Looking for service header:", svcHeader);
   if (!svcHeader) throw new Error("Unsupported service for header lookup");
 
   // find exact match for service header
   const svcIdx = headers.findIndex((h) => (h || "").toString().trim() === svcHeader);
+  console.log("[markServiceFilled] Service column index:", svcIdx);
   if (svcIdx === -1) throw new Error(`Service header '${svcHeader}' not found in BrandInfo header row`);
   const filledIdx0 = svcIdx + 1; // Filled column is immediately after service column
   const filledA1 = indexToA1Col(filledIdx0);
+  console.log("[markServiceFilled] Filled column:", { filledIdx0, filledA1 });
   return { filledIdx0, filledA1 };
 }
 
@@ -147,21 +154,34 @@ async function getSheetIdByTitle(title) {
 // POST /api/markServiceFilled
 // Body: { number: string, service: "solutions"|"media"|"tech"|"seo"|"martech" }
 router.post("/", async (req, res) => {
+  console.log("=".repeat(80));
+  console.log("[markServiceFilled] ===== API CALLED =====");
+  console.log("[markServiceFilled] Timestamp:", new Date().toISOString());
   const { number, service, previous, brand } = req.body || {};
   console.log("[markServiceFilled] incoming:", { number, service, previous, brand });
+  console.log("[markServiceFilled] Full request body:", JSON.stringify(req.body, null, 2));
+  console.log("=".repeat(80));
+  
   if (!number || !service) {
+    console.log("[markServiceFilled] ERROR: Missing required fields");
     return res
       .status(400)
       .json({ message: "'number' and 'service' are required in body" });
   }
 
   const key = String(service).toLowerCase();
+  console.log("[markServiceFilled] Service key (lowercase):", key);
+  
   if (!serviceHeaderNames[key]) {
+    console.log("[markServiceFilled] ERROR: Invalid service key:", key);
+    console.log("[markServiceFilled] Valid services:", Object.keys(serviceHeaderNames));
     return res.status(400).json({
       message:
         "Invalid service. Use one of: solutions, media, tech, seo, martech, fluence, smp",
     });
   }
+  
+  console.log("[markServiceFilled] Service validation passed. Service header name:", serviceHeaderNames[key]);
 
   try {
     // Normalize previous flag: accept boolean true or string "true" (case-insensitive)
@@ -265,6 +285,8 @@ router.post("/", async (req, res) => {
       // Continue to marking filled regardless of whether matches existed
     }
     const needle = normalizeNumber(number);
+    console.log("[markServiceFilled] Normalized phone number:", needle);
+    
     const filledCol = await getFilledColumnForService(CURRENT_SHEET_ID, key);
 
     const brandInfoResp = await sheets.spreadsheets.values.get({
@@ -272,36 +294,61 @@ router.post("/", async (req, res) => {
       range: RANGE,
     });
     const rows = brandInfoResp.data.values || [];
+    console.log("[markServiceFilled] Total rows in BrandInfo:", rows.length);
 
     const normBrand = (v) => t(v).toLowerCase();
     const brandNeedle = brand ? normBrand(brand) : "";
+    console.log("[markServiceFilled] Brand filter:", brandNeedle || "none");
 
     // Find the single best row to update
     // - If brand provided: first matching row where Filled != Y
     // - Else: first row for that phone where Filled != Y
     let targetRowNum = null; // 1-based
+    let matchedRows = [];
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i] || [];
       const phoneVal = row[2] || "";
-      if (normalizeNumber(phoneVal) !== needle) continue;
-      if (brandNeedle && normBrand(row[0]) !== brandNeedle) continue;
+      const normalizedRowPhone = normalizeNumber(phoneVal);
+      
+      if (normalizedRowPhone === needle) {
+        const rowBrand = normBrand(row[0]);
+        const currentFilledValue = t(row[filledCol.filledIdx0]).toUpperCase();
+        
+        matchedRows.push({
+          rowNum: i + 1,
+          brand: row[0],
+          phone: phoneVal,
+          filledValue: currentFilledValue,
+          matchesBrandFilter: !brandNeedle || rowBrand === brandNeedle
+        });
+        
+        if (brandNeedle && rowBrand !== brandNeedle) continue;
 
-      const cur = t(row[filledCol.filledIdx0]).toUpperCase();
-      if (cur !== "Y") {
-        targetRowNum = i + 1;
-        break;
+        if (currentFilledValue !== "Y") {
+          targetRowNum = i + 1;
+          console.log("[markServiceFilled] Found target row:", { 
+            rowNum: targetRowNum, 
+            brand: row[0], 
+            phone: phoneVal,
+            currentFilledValue 
+          });
+          break;
+        }
       }
     }
 
+    console.log("[markServiceFilled] All matched rows:", matchedRows);
     console.log("[markServiceFilled] marking:", { needle, service: key, brand: brandNeedle || undefined, targetRowNum, filledCol });
 
     if (!targetRowNum) {
       // If brand filter was used, differentiate message a bit.
+      console.log("[markServiceFilled] No target row found. Matched rows:", matchedRows);
       return res.status(200).json({
         number: needle,
         service: key,
         brand: brand || undefined,
         updatedCount: 0,
+        matchedRows: matchedRows,
         message: brandNeedle
           ? "No unmarked rows found for this number+brand for this service."
           : "No unmarked rows found for this number for this service.",
@@ -316,6 +363,7 @@ router.post("/", async (req, res) => {
 
     // Apply updates in CURRENT sheet
     console.log("[markServiceFilled] batchUpdate values:", updates.map(u => u.range));
+    console.log("[markServiceFilled] Updating spreadsheet:", CURRENT_SHEET_ID);
     await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId: CURRENT_SHEET_ID,
       requestBody: {
@@ -323,11 +371,13 @@ router.post("/", async (req, res) => {
         data: updates,
       },
     });
+    console.log("[markServiceFilled] Successfully updated cell value to 'Y'");
 
     // Do not write into PREVIOUS sheet; previous sheet is read-only per requirement
 
     // Color the filled cells green
     const sheetId = await getSheetIdByTitle("BrandInfo");
+    console.log("[markServiceFilled] BrandInfo sheetId:", sheetId);
     const filledMeta = await getFilledColumnForService(CURRENT_SHEET_ID, key);
     console.log("[markServiceFilled] coloring rows:", { matchRowIndexes, colIndex: filledMeta.filledIdx0 });
     const requests = matchRowIndexes.map((i) => ({
@@ -350,10 +400,12 @@ router.post("/", async (req, res) => {
 
     if (requests.length > 0) {
       // Color in CURRENT sheet
+      console.log("[markServiceFilled] Applying green background color...");
       await sheets.spreadsheets.batchUpdate({
         spreadsheetId: CURRENT_SHEET_ID,
         requestBody: { requests },
       });
+      console.log("[markServiceFilled] Successfully colored cell green");
       // Do not color previous sheet; keep previous workbook read-only
     }
 
@@ -366,7 +418,8 @@ router.post("/", async (req, res) => {
       message: `Marked ${key} Filled as 'Y' in current sheet and colored green.`,
     });
   } catch (error) {
-    console.error("/api/markServiceFilled error:", error);
+    console.error("[markServiceFilled] ERROR:", error);
+    console.error("[markServiceFilled] Error stack:", error.stack);
     return res
       .status(500)
       .json({ message: "Error marking service filled status.", error: error.message });
