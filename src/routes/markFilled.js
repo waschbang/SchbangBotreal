@@ -5,7 +5,7 @@ const { getGoogleSheets } = require("../lib/googleAuth");
 const router = express.Router();
 
 const sheets = getGoogleSheets();
-const SPREADSHEET_ID = "1OWtO8jYeNFwTpF6movC3o2xDkXlSohTPowiJVYq4cXY";
+const SPREADSHEET_ID = "14_CTezwaYLLkhWX3hskm61zXp0sfrCDnIu7bsfZt36w";
 const RANGE = "BrandInfo!A:R"; // Includes Phone in C and Done in R
 
 // Normalize phone numbers to last 10 digits
