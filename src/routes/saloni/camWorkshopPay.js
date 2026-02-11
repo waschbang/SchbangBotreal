@@ -23,12 +23,56 @@ function normalizeString(value) {
   return String(value).trim();
 }
 
+function normalizeKey(value) {
+  return normalizeString(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function asPlainObject(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value;
+}
+
+function mergeObjects(...sources) {
+  return Object.assign({}, ...sources.map(asPlainObject));
+}
+
 function pickFirst(...values) {
   for (const value of values) {
     const normalized = normalizeString(value);
     if (normalized) return normalized;
   }
   return "";
+}
+
+function pickNoteValue(notes, ...keys) {
+  const noteObj = asPlainObject(notes);
+  const normalizedMap = Object.keys(noteObj).reduce((acc, key) => {
+    acc[normalizeKey(key)] = key;
+    return acc;
+  }, {});
+
+  for (const key of keys) {
+    const normalizedKey = normalizeKey(key);
+    if (!normalizedKey) continue;
+    const actualKey = normalizedMap[normalizedKey];
+    if (actualKey !== undefined) {
+      return noteObj[actualKey];
+    }
+  }
+
+  return "";
+}
+
+function pickNoteByContains(notes, needle) {
+  const noteObj = asPlainObject(notes);
+  const normalizedNeedle = normalizeKey(needle);
+  if (!normalizedNeedle) return "";
+
+  const matchKey = Object.keys(noteObj).find((key) =>
+    normalizeKey(key).includes(normalizedNeedle)
+  );
+
+  return matchKey ? noteObj[matchKey] : "";
 }
 
 function getNested(obj, path) {
@@ -41,67 +85,58 @@ function extractRazorpayData(body) {
   const paymentLink = getNested(body, "payload.payment_link.entity") || {};
   const invoice = getNested(body, "payload.invoice.entity") || {};
 
-  const notes =
-    payment.notes ||
-    order.notes ||
-    paymentLink.notes ||
-    invoice.notes ||
-    body.notes ||
-    {};
+  const notes = mergeObjects(
+    payment.notes,
+    order.notes,
+    paymentLink.notes,
+    invoice.notes,
+    body.notes
+  );
 
-  const customerDetails =
-    payment.customer_details ||
-    order.customer_details ||
-    paymentLink.customer ||
-    invoice.customer_details ||
-    {};
+  const customerDetails = mergeObjects(
+    payment.customer_details,
+    order.customer_details,
+    paymentLink.customer_details,
+    invoice.customer_details
+  );
+
+  const paymentLinkCustomer = asPlainObject(paymentLink.customer);
 
   const fullName = pickFirst(
-    notes.full_name,
-    notes.fullName,
-    notes.name,
-    notes.customer_name,
+    pickNoteValue(notes, "full_name", "full name", "name", "customer_name", "customer name"),
+    pickNoteByContains(notes, "name"),
+    payment.name,
+    paymentLinkCustomer.name,
     customerDetails.name,
+    order.payer_name,
     payment.customer_name,
     payment.card && payment.card.name
   );
 
   const age = pickFirst(
-    notes.age,
-    notes.Age,
-    notes.customer_age,
-    notes.customerAge,
+    pickNoteValue(notes, "age", "customer_age", "customer age"),
     customerDetails.age
   );
 
   const city = pickFirst(
-    notes.city,
-    notes.City,
-    notes.customer_city,
-    notes.customerCity,
+    pickNoteValue(notes, "city", "customer_city", "customer city"),
     customerDetails.city
   );
 
   const phoneNumber = pickFirst(
-    notes.phone,
-    notes.phone_number,
-    notes.phoneNumber,
-    notes.mobile,
-    notes.contact,
+    pickNoteValue(notes, "phone", "phone_number", "phone number", "phoneNumber", "mobile", "contact"),
     payment.contact,
     order.contact,
     customerDetails.contact,
-    paymentLink.customer && paymentLink.customer.contact
+    paymentLinkCustomer.contact
   );
 
   const emailId = pickFirst(
-    notes.email,
-    notes.email_id,
-    notes.emailId,
+    pickNoteValue(notes, "email", "email_id", "email id", "emailId"),
     payment.email,
     order.email,
     customerDetails.email,
-    paymentLink.customer && paymentLink.customer.email
+    paymentLinkCustomer.email
   );
 
   return { fullName, age, city, phoneNumber, emailId };
@@ -136,7 +171,7 @@ router.post("/pay", async (req, res) => {
       event: event || null,
     });
   }
-
+  console.log("data recieved from razorpay is ", req.body.payload.payment.entity);
   const { fullName, age, city, phoneNumber, emailId } = extractRazorpayData(req.body || {});
 
   if (!fullName && !phoneNumber && !emailId) {
