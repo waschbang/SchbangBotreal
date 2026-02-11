@@ -1,11 +1,12 @@
 const express = require("express");
 const moment = require("moment-timezone");
 const { getGoogleSheets } = require("../../lib/googleAuth");
+const { sendCamConfirmationEmail } = require("../../lib/saloni/CAM_mail");
 
 const router = express.Router();
 
 const sheets = getGoogleSheets();
-const SPREADSHEET_ID = "1_7NwXpcmq_FKKHWjWAITCKva6hPpWWNTCqMy-Z1Zeg0";
+const SPREADSHEET_ID = "1HG8iWAHMDHDUnElzrEuzono5q_Ge-BjVBnuz7tTYlYI";
 
 let cachedSheetTitle = null;
 
@@ -16,6 +17,25 @@ const COMPLETION_EVENTS = new Set([
   "payment_link.paid",
   "subscription.charged",
 ]);
+
+const processedPayments = new Map();
+const DEDUP_TTL_MS = 6 * 60 * 60 * 1000;
+
+function isDuplicatePayment(paymentId) {
+  if (!paymentId) return false;
+  const now = Date.now();
+  const lastSeen = processedPayments.get(paymentId);
+  if (lastSeen && now - lastSeen < DEDUP_TTL_MS) return true;
+  processedPayments.set(paymentId, now);
+  return false;
+}
+
+function cleanupProcessedPayments() {
+  const now = Date.now();
+  for (const [paymentId, ts] of processedPayments.entries()) {
+    if (now - ts > DEDUP_TTL_MS) processedPayments.delete(paymentId);
+  }
+}
 
 function normalizeString(value) {
   if (value === undefined || value === null) return "";
@@ -163,6 +183,7 @@ async function resolveSheetTitle() {
 router.post("/pay", async (req, res) => {
   const event = normalizeString(req.body?.event);
   const shouldProcess = !event || COMPLETION_EVENTS.has(event);
+  const paymentId = normalizeString(getNested(req.body, "payload.payment.entity.id"));
 
   if (!shouldProcess) {
     return res.status(200).json({
@@ -171,7 +192,17 @@ router.post("/pay", async (req, res) => {
       event: event || null,
     });
   }
-  console.log("data recieved from razorpay is ", req.body.payload.payment.entity);
+
+  cleanupProcessedPayments();
+  if (isDuplicatePayment(paymentId)) {
+    return res.status(200).json({
+      status: "ignored",
+      reason: "duplicate_payment",
+      event: event || null,
+      paymentId: paymentId || null,
+    });
+  }
+
   const { fullName, age, city, phoneNumber, emailId } = extractRazorpayData(req.body || {});
 
   if (!fullName && !phoneNumber && !emailId) {
@@ -204,10 +235,23 @@ router.post("/pay", async (req, res) => {
       resource: { values },
     });
 
+    let emailStatus = "skipped";
+    if (emailId) {
+      try {
+        await sendCamConfirmationEmail({ to: emailId, fullName });
+        emailStatus = "sent";
+      } catch (emailError) {
+        emailStatus = "failed";
+        console.error("[saloni cam_workshop] Email send failed:", emailError.message);
+      }
+    }
+
     return res.status(201).json({
       status: "success",
       message: "Payment data stored in Google Sheets",
       event: event || null,
+      paymentId: paymentId || null,
+      emailStatus,
     });
   } catch (error) {
     console.error("[saloni cam_workshop] Error writing to Google Sheets:", error);
