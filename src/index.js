@@ -20,6 +20,7 @@ const tshirtTryOnRoute = require("./routes/tshirtTryOn");
 const skinCareSuggestionRoute = require("./routes/skinCareSuggestion");
 // const genaibotRoute = require("./routes/genaibot");
 const copyFeedbackRoute = require("./routes/copyFeedback");
+const camWorkshopPayRoute = require("./routes/saloni/camWorkshopPay");
 //real genai
 // const genaiRoute = require("./routes/genai");
 const aiCallingRoute = require("./routes/aicalling"); // AiSensy call webhook
@@ -86,6 +87,7 @@ app.use("/api/skincare-suggestion", skinCareSuggestionRoute);
 app.use("/api/pdp", pdpResponseRoute); // Register the PDP response route
 app.use("/api/markFilled", markFilledRoute); // Register the markFilled route
 app.use("/api/markServiceFilled", markServiceFilledRoute); // Register the markServiceFilled route
+app.use("/salonibackend/api/cam_workshop", camWorkshopPayRoute);
 // app.use("/api/genaibot", genaibotRoute); // Register the genaibot route
 app.use("/webhook/aisensy", aiCallingRoute); // Register AiSensy webhook at /webhook/aisensy
 //real genai
