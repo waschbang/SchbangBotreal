@@ -7,6 +7,7 @@ const router = express.Router();
 
 const sheets = getGoogleSheets();
 const SPREADSHEET_ID = "1HG8iWAHMDHDUnElzrEuzono5q_Ge-BjVBnuz7tTYlYI";
+const SHEET_TITLE = "Sheet1";
 
 let cachedSheetTitle = null;
 
@@ -162,24 +163,6 @@ function extractRazorpayData(body) {
   return { fullName, age, city, phoneNumber, emailId };
 }
 
-async function resolveSheetTitle() {
-  if (cachedSheetTitle) return cachedSheetTitle;
-
-  try {
-    const meta = await sheets.spreadsheets.get({
-      spreadsheetId: SPREADSHEET_ID,
-      fields: "sheets.properties.title",
-    });
-    const firstSheet = (meta.data.sheets || [])[0];
-    cachedSheetTitle = firstSheet?.properties?.title || "Sheet1";
-  } catch (error) {
-    console.error("[saloni cam_workshop] Failed to resolve sheet title:", error.message);
-    cachedSheetTitle = "Sheet1";
-  }
-
-  return cachedSheetTitle;
-}
-
 router.post("/pay", async (req, res) => {
   const event = normalizeString(req.body?.event);
   const shouldProcess = !event || COMPLETION_EVENTS.has(event);
@@ -216,8 +199,7 @@ router.post("/pay", async (req, res) => {
   const timestamp = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
 
   try {
-    const sheetTitle = await resolveSheetTitle();
-    const range = `${sheetTitle}!A:F`;
+    const range = `${SHEET_TITLE}!A1:F1`;
 
     const values = [[
       timestamp,
@@ -232,6 +214,7 @@ router.post("/pay", async (req, res) => {
       spreadsheetId: SPREADSHEET_ID,
       range,
       valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
       resource: { values },
     });
 
