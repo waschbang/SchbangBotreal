@@ -8,37 +8,46 @@ const router = express.Router();
 const sheets = getGoogleSheets();
 const CURRENT_SHEET_ID = getActiveSpreadsheetId();
 const PREVIOUS_SHEET_ID = getPreviousSpreadsheetId();
-const RANGE = "BrandInfo!A:R"; // Includes all columns up to Done (R)
+const RANGE = "BrandInfo!A:BF"; // Includes all columns up to Done (BF)
 
 // Normalize to last 10 digits
 const normalizeNumber = (num) => (num ? String(num).replace(/\D/g, "").slice(-10) : "");
 
 // Tab aliases per service (include common variants)
 const SERVICE_TAB_ALIASES = {
-  solutions: [
-    "Solutions",
-    "SOLUTIONS",
-    "Solution",
-    "SOLUTION",
-    "Solutions Feedback",
-    "SOLUTIONS FEEDBACK",
-  ],
-  media: [
-    "Media",
-    "MEDIA",
-    "Media Feedback",
-    "MEDIA FEEDBACK",
-  ],
-  tech: [
-    "Tech",
-    "TECH",
-    "Technology",
-    "TECHNOLOGY",
-  ],
-  seo: ["SEO", "Seo"],
-  martech: ["MART-TECH", "MarTech", "MARTTECH", "MART TECH"],
+  solutions: ["Solutions", "SOLUTIONS", "Solution", "SOLUTION", "Solutions Feedback", "SOLUTIONS FEEDBACK"],
   fluence: ["Fluence", "FLUENCE", "Fluence Feedback", "INFLUENCER", "Influencer"],
   smp: ["SMP", "smp"],
+  media: ["Media", "MEDIA", "Media Feedback", "MEDIA FEEDBACK"],
+  tech: ["Tech", "TECH", "Technology", "TECHNOLOGY"],
+  uxdesign: ["Design", "DESIGN", "UX Design", "UX DESIGN", "UXDesign"],
+  design: ["Design", "DESIGN", "UX Design", "UX DESIGN", "UXDesign"],
+  development: ["Development", "DEVELOPMENT", "Dev", "DEV"],
+  uxdevelopment: ["Design + Development", "Design+Development", "DESIGN + DEVELOPMENT", "UX Design + Development", "UX+Development"],
+  designdevelopment: ["Design + Development", "Design+Development", "DESIGN + DEVELOPMENT", "UX Design + Development", "UX+Development"],
+  seocontent: ["SEO/Content", "SEO / Content", "SEO CONTENT", "SEO & Content", "SEO&Content"],
+  seo: ["SEO", "Seo"],
+  content: ["Content", "CONTENT"],
+  seopluscontent: ["SEO + Content", "SEO+Content", "SEO AND CONTENT"],
+  aso: ["ASO", "Aso"],
+  backlinksseo: ["Backlinks", "BACKLINKS", "Backlinks- seo", "Backlinks-seo", "BACKLINKS SEO", "Backlinks SEO"],
+  backlinks: ["Backlinks", "BACKLINKS", "Backlinks- seo", "Backlinks-seo", "BACKLINKS SEO", "Backlinks SEO"],
+  gmb: ["GMB", "Gmb"],
+  aiio: ["GEO / AIO", "GEO/AIO", "AI IO", "AIIO", "AI-IO", "GEO", "Geo"],
+  geoaio: ["GEO / AIO", "GEO/AIO", "AI IO", "AIIO", "AI-IO", "GEO", "Geo"],
+  geo: ["GEO / AIO", "GEO/AIO", "GEO", "Geo"],
+  cro: ["CRO / Growth", "CRO/Growth", "CRO", "Cro"],
+  crogrowth: ["CRO / Growth", "CRO/Growth", "CRO", "Cro"],
+  martech: ["MART-TECH", "MarTech", "MARTTECH", "MART TECH"],
+  sociallistening: ["Social Listening", "SOCIAL LISTENING", "Social Listening (SL)", "SL"],
+  performancecreatives: ["Creatives / Performance Creatives", "Performance creatives", "Performance Creatives", "PERFORMANCE CREATIVES"],
+  wa: ["WA", "Wa", "WhatsApp", "WhatsApp Automation", "WHATSAPP AUTOMATION"],
+  emailmarketing: ["E-mail Marketing", "Email Marketing", "EMAIL MARKETING"],
+  orm: ["ORM", "Orm"],
+  marketingautomation: ["Marketing Automation", "Marketing automation", "MARKETING AUTOMATION"],
+  zohocrm: ["Zoho CRM", "ZOHO CRM", "ZohoCRM"],
+  chatbotcreation: ["Chatbot Creation", "CHATBOT CREATION"],
+  apluslistings: ["A+ Listings", "A+Listings", "A+ LISTINGS"],
 };
 
 const t = (v) => (v === undefined || v === null ? "" : String(v).trim());
@@ -70,7 +79,7 @@ function nowInIST_ddmmyyyy_hhmmss() {
 async function findBrandInfoRowsByPhone(spreadsheetId, normalizedPhone) {
   const resp = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: "BrandInfo!A:R",
+    range: "BrandInfo!A:BF",
   });
   const rows = resp.data.values || [];
   const hits = [];
@@ -89,21 +98,46 @@ async function tryGetSheetRows(spreadsheetId, possibleNames) {
       const resp = await sheets.spreadsheets.values.get({ spreadsheetId, range: `${name}!A:Z` });
       const rows = resp.data.values || [];
       if (rows.length > 0) return { rows, name };
-    } catch (_) {}
+    } catch (_) { }
   }
   return null;
 }
 
-// Service display names in BrandInfo header row
+// Service display names in BrandInfo header row (must match sheet headers exactly)
 const serviceHeaderNames = {
   solutions: "Solutions",
+  fluence: "Fluence",
+  smp: "SMP",
   media: "Media",
   tech: "Tech",
+  uxdesign: "Design",
+  design: "Design",
+  development: "Development",
+  uxdevelopment: "Design + Development",
+  designdevelopment: "Design + Development",
+  seocontent: "SEO/Content",
   seo: "SEO",
+  content: "Content",
+  seopluscontent: "SEO + Content",
+  aso: "ASO",
+  backlinksseo: "Backlinks",
+  backlinks: "Backlinks",
+  gmb: "GMB",
+  aiio: "GEO / AIO",
+  geoaio: "GEO / AIO",
+  geo: "GEO / AIO",
+  cro: "CRO / Growth",
+  crogrowth: "CRO / Growth",
   martech: "MarTech",
-  fluence: "Fluence",
-  markaas: "Markaas",
-  smp: "SMP",
+  sociallistening: "Social Listening",
+  performancecreatives: "Creatives / Performance Creatives",
+  wa: "WhatsApp Automation",
+  emailmarketing: "E-mail Marketing",
+  orm: "ORM",
+  marketingautomation: "Marketing Automation",
+  chatbotcreation: "Chatbot Creation",
+  zohocrm: "Zoho CRM",
+  apluslistings: "A+ Listings",
 };
 
 function indexToA1Col(idx0) {
@@ -122,19 +156,23 @@ async function getFilledColumnForService(spreadsheetId, serviceKey) {
   console.log("[markServiceFilled] getFilledColumnForService:", { spreadsheetId, serviceKey });
   const headersResp = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: "BrandInfo!A1:Q1",
+    range: "BrandInfo!A1:BF1",
   });
   const headers = (headersResp.data.values && headersResp.data.values[0]) || [];
   console.log("[markServiceFilled] BrandInfo headers:", headers);
-  
+
   const svcHeader = serviceHeaderNames[serviceKey];
   console.log("[markServiceFilled] Looking for service header:", svcHeader);
   if (!svcHeader) throw new Error("Unsupported service for header lookup");
 
-  // find exact match for service header
-  const svcIdx = headers.findIndex((h) => (h || "").toString().trim() === svcHeader);
+  // find match for service header (case-insensitive, whitespace-normalized)
+  const norm = (s) => (s || "").toString().trim().replace(/\s+/g, " ").toLowerCase();
+  const svcIdx = headers.findIndex((h) => norm(h) === norm(svcHeader));
   console.log("[markServiceFilled] Service column index:", svcIdx);
-  if (svcIdx === -1) throw new Error(`Service header '${svcHeader}' not found in BrandInfo header row`);
+  if (svcIdx === -1) {
+    console.log("[markServiceFilled] Available headers:", headers.map((h, i) => `[${i}] '${h}'`).join(", "));
+    throw new Error(`Service header '${svcHeader}' not found in BrandInfo header row`);
+  }
   const filledIdx0 = svcIdx + 1; // Filled column is immediately after service column
   const filledA1 = indexToA1Col(filledIdx0);
   console.log("[markServiceFilled] Filled column:", { filledIdx0, filledA1 });
@@ -161,7 +199,7 @@ router.post("/", async (req, res) => {
   console.log("[markServiceFilled] incoming:", { number, service, previous, brand });
   console.log("[markServiceFilled] Full request body:", JSON.stringify(req.body, null, 2));
   console.log("=".repeat(80));
-  
+
   if (!number || !service) {
     console.log("[markServiceFilled] ERROR: Missing required fields");
     return res
@@ -171,16 +209,15 @@ router.post("/", async (req, res) => {
 
   const key = String(service).toLowerCase();
   console.log("[markServiceFilled] Service key (lowercase):", key);
-  
+
   if (!serviceHeaderNames[key]) {
     console.log("[markServiceFilled] ERROR: Invalid service key:", key);
     console.log("[markServiceFilled] Valid services:", Object.keys(serviceHeaderNames));
     return res.status(400).json({
-      message:
-        "Invalid service. Use one of: solutions, media, tech, seo, martech, fluence, smp",
+      message: `Invalid service. Use one of: ${Object.keys(serviceHeaderNames).join(", ")}`,
     });
   }
-  
+
   console.log("[markServiceFilled] Service validation passed. Service header name:", serviceHeaderNames[key]);
 
   try {
@@ -261,7 +298,7 @@ router.post("/", async (req, res) => {
                   await sheets.spreadsheets.values.get({ spreadsheetId: CURRENT_SHEET_ID, range: `${alias}!A:A` });
                   targetTab = alias;
                   break;
-                } catch (_) {}
+                } catch (_) { }
               }
               if (!targetTab) {
                 console.log("[markServiceFilled] copy: no target tab found in current sheet for aliases", aliases);
@@ -286,7 +323,7 @@ router.post("/", async (req, res) => {
     }
     const needle = normalizeNumber(number);
     console.log("[markServiceFilled] Normalized phone number:", needle);
-    
+
     const filledCol = await getFilledColumnForService(CURRENT_SHEET_ID, key);
 
     const brandInfoResp = await sheets.spreadsheets.values.get({
@@ -309,11 +346,11 @@ router.post("/", async (req, res) => {
       const row = rows[i] || [];
       const phoneVal = row[2] || "";
       const normalizedRowPhone = normalizeNumber(phoneVal);
-      
+
       if (normalizedRowPhone === needle) {
         const rowBrand = normBrand(row[0]);
         const currentFilledValue = t(row[filledCol.filledIdx0]).toUpperCase();
-        
+
         matchedRows.push({
           rowNum: i + 1,
           brand: row[0],
@@ -321,16 +358,16 @@ router.post("/", async (req, res) => {
           filledValue: currentFilledValue,
           matchesBrandFilter: !brandNeedle || rowBrand === brandNeedle
         });
-        
+
         if (brandNeedle && rowBrand !== brandNeedle) continue;
 
         if (currentFilledValue !== "Y") {
           targetRowNum = i + 1;
-          console.log("[markServiceFilled] Found target row:", { 
-            rowNum: targetRowNum, 
-            brand: row[0], 
+          console.log("[markServiceFilled] Found target row:", {
+            rowNum: targetRowNum,
+            brand: row[0],
             phone: phoneVal,
-            currentFilledValue 
+            currentFilledValue
           });
           break;
         }
@@ -359,6 +396,14 @@ router.post("/", async (req, res) => {
       range: `BrandInfo!${filledCol.filledA1}${targetRowNum}`,
       values: [["Y"]],
     }];
+    // If SMP is filled, also mark Done column (BF) as Y
+    if (key === "smp") {
+      updates.push({
+        range: `BrandInfo!BF${targetRowNum}`,
+        values: [["Y"]],
+      });
+      console.log("[markServiceFilled] SMP filled — also marking Done (BF) as Y");
+    }
     const matchRowIndexes = [targetRowNum - 1];
 
     // Apply updates in CURRENT sheet
@@ -397,6 +442,29 @@ router.post("/", async (req, res) => {
         fields: "userEnteredFormat.backgroundColor",
       },
     }));
+    // Also color Done (BF, index 57) green when SMP is filled
+    if (key === "smp") {
+      matchRowIndexes.forEach((i) => {
+        requests.push({
+          repeatCell: {
+            range: {
+              sheetId,
+              startRowIndex: i,
+              endRowIndex: i + 1,
+              startColumnIndex: 57,
+              endColumnIndex: 58,
+            },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: { red: 0.86, green: 1.0, blue: 0.86 },
+              },
+            },
+            fields: "userEnteredFormat.backgroundColor",
+          },
+        });
+      });
+      console.log("[markServiceFilled] SMP filled — also coloring Done (BF) green");
+    }
 
     if (requests.length > 0) {
       // Color in CURRENT sheet

@@ -4,9 +4,9 @@
 const SHEET_IDS = [
   // Older -> Newer
   // Previous (old) cycle
-  "1vKSxjnHKSKjc_iWD86W6xTF7bYNtYN8s5K75NNM8LrA",
-  // Current (new) cycle
   "14_CTezwaYLLkhWX3hskm61zXp0sfrCDnIu7bsfZt36w",
+  // Current (new) cycle
+  "1r3yab4vRj1GzwM7u2zmKkfiUmMMQa50rfMBaxsLF-2M",
 ];
 
 function getActiveSpreadsheetId() {

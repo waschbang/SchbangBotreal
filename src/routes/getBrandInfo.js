@@ -1,19 +1,86 @@
 const express = require("express");
 const { google } = require("googleapis");
 const { getGoogleSheets } = require("../lib/googleAuth");
- const { getActiveSpreadsheetId, getPreviousSpreadsheetId } = require("../config/spreadsheetCycle");
+const { getActiveSpreadsheetId, getPreviousSpreadsheetId } = require("../config/spreadsheetCycle");
 
 const router = express.Router();
 
 const sheets = getGoogleSheets();
 const SPREADSHEET_ID = getActiveSpreadsheetId(); // Active spreadsheet for current cycle
-const RANGE = "BrandInfo!A:R"; // Columns through 'Done' (R)
+const RANGE = "BrandInfo!A:BF"; // Columns A through Done (BF)
 
 // Helper to normalize phone numbers to compare reliably (last 10 digits)
 const normalizeNumber = (num) => (num ? String(num).replace(/\D/g, "").slice(-10) : "");
 
 // Safe trim utility
 const t = (v) => (v === undefined || v === null ? "" : String(v).trim());
+
+// -------------------------------------------------------------------
+// Data-driven column definitions (index → field key)
+// Each department has two consecutive columns: dept (Y/N) + deptFilled (Y/N)
+// -------------------------------------------------------------------
+const COLUMNS = [
+  { idx: 0, key: "brand" },
+  { idx: 1, key: "brandPOCName" },
+  { idx: 2, key: "phoneNumber" },
+  // -- Departments (Y/N) + Filled (Y/N) --
+  { idx: 3, key: "solutions" },
+  { idx: 4, key: "solutionsFilled" },
+  { idx: 5, key: "fluence" },
+  { idx: 6, key: "fluenceFilled" },
+  { idx: 7, key: "smp" },
+  { idx: 8, key: "smpFilled" },
+  { idx: 9, key: "media" },
+  { idx: 10, key: "mediaFilled" },
+  { idx: 11, key: "tech" },
+  { idx: 12, key: "techFilled" },
+  { idx: 13, key: "design" },
+  { idx: 14, key: "designFilled" },
+  { idx: 15, key: "development" },
+  { idx: 16, key: "developmentFilled" },
+  { idx: 17, key: "designDevelopment" },
+  { idx: 18, key: "designDevelopmentFilled" },
+  { idx: 19, key: "seoContent" },
+  { idx: 20, key: "seoContentFilled" },
+  { idx: 21, key: "seo" },
+  { idx: 22, key: "seoFilled" },
+  { idx: 23, key: "content" },
+  { idx: 24, key: "contentFilled" },
+  { idx: 25, key: "seoPlusContent" },
+  { idx: 26, key: "seoPlusContentFilled" },
+  { idx: 27, key: "aso" },
+  { idx: 28, key: "asoFilled" },
+  { idx: 29, key: "backlinks" },
+  { idx: 30, key: "backlinksFilled" },
+  { idx: 31, key: "gmb" },
+  { idx: 32, key: "gmbFilled" },
+  { idx: 33, key: "geoAio" },
+  { idx: 34, key: "geoAioFilled" },
+  { idx: 35, key: "croGrowth" },
+  { idx: 36, key: "croGrowthFilled" },
+  { idx: 37, key: "marTech" },
+  { idx: 38, key: "marTechFilled" },
+  { idx: 39, key: "socialListening" },
+  { idx: 40, key: "socialListeningFilled" },
+  { idx: 41, key: "performanceCreatives" },
+  { idx: 42, key: "performanceCreativesFilled" },
+  { idx: 43, key: "wa" },
+  { idx: 44, key: "waFilled" },
+  { idx: 45, key: "emailMarketing" },
+  { idx: 46, key: "emailMarketingFilled" },
+  { idx: 47, key: "orm" },
+  { idx: 48, key: "ormFilled" },
+  { idx: 49, key: "marketingAutomation" },
+  { idx: 50, key: "marketingAutomationFilled" },
+  { idx: 51, key: "chatbotCreation" },
+  { idx: 52, key: "chatbotCreationFilled" },
+  { idx: 53, key: "zohoCrm" },
+  { idx: 54, key: "zohoCrmFilled" },
+  { idx: 55, key: "aPlusListings" },
+  { idx: 56, key: "aPlusListingsFilled" },
+  // -- Final status column --
+  { idx: 57, key: "done" },
+];
 
 // Build a header index map for a row of headers
 function buildHeaderIdx(headers) {
@@ -118,48 +185,15 @@ router.post("/", async (req, res) => {
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i] || [];
-
-      // Column mapping based on new layout with separate Filled columns and a final Done column
-      const brand = t(row[0]); // A: Brands
-      const brandPOCName = t(row[1]); // B: Brand POC Name
-      const phone = t(row[2]); // C: Phone Number
-      const solutions = t(row[3]); // D: Solutions
-      const solutionsFilled = t(row[4]); // E: Solutions Filled (Y/N)
-      const media = t(row[5]); // F: Media
-      const mediaFilled = t(row[6]); // G: Media Filled (Y/N)
-      const tech = t(row[7]); // H: Tech
-      const techFilled = t(row[8]); // I: Tech Filled (Y/N)
-      const seo = t(row[9]); // J: SEO
-      const seoFilled = t(row[10]); // K: SEO Filled (Y/N)
-      const marTech = t(row[11]); // L: MarTech
-      const marTechFilled = t(row[12]); // M: MarTech Filled (Y/N)
-      const fluence = t(row[13]); // N: Fluence
-      const fluenceFilled = t(row[14]); // O: Fluence Filled (Y/N)
-      const smp = t(row[15]); // P: SMP
-      const smpFilled = t(row[16]); // Q: SMP Filled (Y/N)
-      const done = t(row[17]); // R: Done
+      const phone = t(row[2]); // Column C: Phone Number
 
       if (normalizeNumber(phone) === needle) {
-        records.push({
-          brand,
-          brandPOCName,
-          phoneNumber: phone,
-          solutions,
-          solutionsFilled,
-          media,
-          mediaFilled,
-          tech,
-          techFilled,
-          seo,
-          seoFilled,
-          marTech,
-          marTechFilled,
-          fluence,
-          fluenceFilled,
-          smp,
-          smpFilled,
-          done,
-        });
+        // Build record dynamically from COLUMNS definition
+        const record = {};
+        for (const col of COLUMNS) {
+          record[col.key] = t(row[col.idx]);
+        }
+        records.push(record);
       }
     }
 
