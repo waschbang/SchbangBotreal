@@ -1,12 +1,12 @@
 const express = require("express");
-const { google } = require("googleapis");
 const { getGoogleSheets } = require("../lib/googleAuth");
+const { getActiveSpreadsheetId } = require("../config/spreadsheetCycle");
 
 const router = express.Router();
 
 const sheets = getGoogleSheets();
-const SPREADSHEET_ID = "14_CTezwaYLLkhWX3hskm61zXp0sfrCDnIu7bsfZt36w";
-const RANGE = "BrandInfo!A:R"; // Includes Phone in C and Done in R
+const SPREADSHEET_ID = getActiveSpreadsheetId();
+const RANGE = "BrandInfo!A:BF"; // Includes Phone in C and Done in BF
 
 // Normalize phone numbers to last 10 digits
 const normalizeNumber = (num) => (num ? String(num).replace(/\D/g, "").slice(-10) : "");
@@ -53,7 +53,7 @@ router.post("/", async (req, res) => {
       if (normalizeNumber(phone) !== needle) continue;
       if (brandNeedle && normBrand(row[0]) !== brandNeedle) continue; // Column A brand
 
-      const doneVal = t(row[17]).toUpperCase(); // Column R (0-based 17)
+      const doneVal = t(row[57]).toUpperCase(); // Column BF (0-based 57)
       if (doneVal !== "Y") {
         targetRowNum = i + 1;
         break;
@@ -71,9 +71,9 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Prepare values update for Done column (R) to 'Y' for one row
+    // Prepare values update for Done column (BF) to 'Y' for one row
     const data = [{
-      range: `BrandInfo!R${targetRowNum}`,
+      range: `BrandInfo!BF${targetRowNum}`,
       values: [["Y"]],
     }];
 
@@ -85,7 +85,7 @@ router.post("/", async (req, res) => {
       },
     });
 
-    // Color that cell green via batchUpdate (Done column R)
+    // Color that cell green via batchUpdate (Done column BF)
     const sheetId = await getSheetIdByTitle("BrandInfo");
     const rowIndex0 = targetRowNum - 1;
     const requests = [{
@@ -94,8 +94,8 @@ router.post("/", async (req, res) => {
           sheetId,
           startRowIndex: rowIndex0, // 0-based, header is 0
           endRowIndex: rowIndex0 + 1,
-          startColumnIndex: 17, // Column R (0-based)
-          endColumnIndex: 18,
+          startColumnIndex: 57, // Column BF (0-based)
+          endColumnIndex: 58,
         },
         cell: {
           userEnteredFormat: {
