@@ -6,7 +6,7 @@ const router = express.Router();
 
 const sheets = getGoogleSheets();
 const SPREADSHEET_ID = getActiveSpreadsheetId();
-const RANGE = "BrandInfo!A:BF"; // Includes Phone in C and Done in BF
+const RANGE = "BrandInfo!A:BH"; // Includes Phone in C and Done in BH
 
 // Normalize phone numbers to last 10 digits
 const normalizeNumber = (num) => (num ? String(num).replace(/\D/g, "").slice(-10) : "");
@@ -53,7 +53,7 @@ router.post("/", async (req, res) => {
       if (normalizeNumber(phone) !== needle) continue;
       if (brandNeedle && normBrand(row[0]) !== brandNeedle) continue; // Column A brand
 
-      const doneVal = t(row[57]).toUpperCase(); // Column BF (0-based 57)
+      const doneVal = t(row[59]).toUpperCase(); // Column BH (0-based 59)
       if (doneVal !== "Y") {
         targetRowNum = i + 1;
         break;
@@ -73,7 +73,7 @@ router.post("/", async (req, res) => {
 
     // Prepare values update for Done column (BF) to 'Y' for one row
     const data = [{
-      range: `BrandInfo!BF${targetRowNum}`,
+      range: `BrandInfo!BH${targetRowNum}`,
       values: [["Y"]],
     }];
 
@@ -94,8 +94,8 @@ router.post("/", async (req, res) => {
           sheetId,
           startRowIndex: rowIndex0, // 0-based, header is 0
           endRowIndex: rowIndex0 + 1,
-          startColumnIndex: 57, // Column BF (0-based)
-          endColumnIndex: 58,
+          startColumnIndex: 59, // Column BH (0-based)
+          endColumnIndex: 60,
         },
         cell: {
           userEnteredFormat: {

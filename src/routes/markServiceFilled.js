@@ -8,7 +8,7 @@ const router = express.Router();
 const sheets = getGoogleSheets();
 const CURRENT_SHEET_ID = getActiveSpreadsheetId();
 const PREVIOUS_SHEET_ID = getPreviousSpreadsheetId();
-const RANGE = "BrandInfo!A:BF"; // Includes all columns up to Done (BF)
+const RANGE = "BrandInfo!A:BH"; // Includes all columns up to Done (BH)
 
 // Normalize to last 10 digits
 const normalizeNumber = (num) => (num ? String(num).replace(/\D/g, "").slice(-10) : "");
@@ -20,6 +20,7 @@ const SERVICE_TAB_ALIASES = {
   smp: ["SMP", "smp"],
   media: ["Media", "MEDIA", "Media Feedback", "MEDIA FEEDBACK"],
   tech: ["Tech", "TECH", "Technology", "TECHNOLOGY"],
+  techform: ["Tech Form", "TECH FORM", "TechForm"],
   uxdesign: ["Design", "DESIGN", "UX Design", "UX DESIGN", "UXDesign"],
   design: ["Design", "DESIGN", "UX Design", "UX DESIGN", "UXDesign"],
   development: ["Development", "DEVELOPMENT", "Dev", "DEV"],
@@ -79,7 +80,7 @@ function nowInIST_ddmmyyyy_hhmmss() {
 async function findBrandInfoRowsByPhone(spreadsheetId, normalizedPhone) {
   const resp = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: "BrandInfo!A:BF",
+    range: "BrandInfo!A:BH",
   });
   const rows = resp.data.values || [];
   const hits = [];
@@ -110,6 +111,7 @@ const serviceHeaderNames = {
   smp: "SMP",
   media: "Media",
   tech: "Tech",
+  techform: "Tech Form",
   uxdesign: "Design",
   design: "Design",
   development: "Development",
@@ -156,7 +158,7 @@ async function getFilledColumnForService(spreadsheetId, serviceKey) {
   console.log("[markServiceFilled] getFilledColumnForService:", { spreadsheetId, serviceKey });
   const headersResp = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: "BrandInfo!A1:BF1",
+    range: "BrandInfo!A1:BH1",
   });
   const headers = (headersResp.data.values && headersResp.data.values[0]) || [];
   console.log("[markServiceFilled] BrandInfo headers:", headers);
@@ -396,13 +398,13 @@ router.post("/", async (req, res) => {
       range: `BrandInfo!${filledCol.filledA1}${targetRowNum}`,
       values: [["Y"]],
     }];
-    // If SMP is filled, also mark Done column (BF) as Y
+    // If SMP is filled, also mark Done column (BH) as Y
     if (key === "smp") {
       updates.push({
-        range: `BrandInfo!BF${targetRowNum}`,
+        range: `BrandInfo!BH${targetRowNum}`,
         values: [["Y"]],
       });
-      console.log("[markServiceFilled] SMP filled — also marking Done (BF) as Y");
+      console.log("[markServiceFilled] SMP filled — also marking Done (BH) as Y");
     }
     const matchRowIndexes = [targetRowNum - 1];
 
@@ -442,7 +444,7 @@ router.post("/", async (req, res) => {
         fields: "userEnteredFormat.backgroundColor",
       },
     }));
-    // Also color Done (BF, index 57) green when SMP is filled
+    // Also color Done (BH, index 59) green when SMP is filled
     if (key === "smp") {
       matchRowIndexes.forEach((i) => {
         requests.push({
@@ -451,8 +453,8 @@ router.post("/", async (req, res) => {
               sheetId,
               startRowIndex: i,
               endRowIndex: i + 1,
-              startColumnIndex: 57,
-              endColumnIndex: 58,
+              startColumnIndex: 59,
+              endColumnIndex: 60,
             },
             cell: {
               userEnteredFormat: {
@@ -463,7 +465,7 @@ router.post("/", async (req, res) => {
           },
         });
       });
-      console.log("[markServiceFilled] SMP filled — also coloring Done (BF) green");
+      console.log("[markServiceFilled] SMP filled — also coloring Done (BH) green");
     }
 
     if (requests.length > 0) {
