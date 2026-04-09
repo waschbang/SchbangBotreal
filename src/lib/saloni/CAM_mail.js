@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs");
 
 const DEFAULT_FROM = "salonisuri@thecoach.co.in";
-const DEFAULT_SUBJECT = "Abundance Workshop Registration Confirmation";
+const DEFAULT_SUBJECT = "Rewire Your Brain Workshop Registration Confirmation";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -34,23 +34,23 @@ function buildLetterText(firstName) {
   return [
     `Dear ${firstName},`,
     "",
-    "Thank you for your registration for the workshop \"Creating An Abundance Mindset\" (CAM).",
+    "Thank you for your registration for the workshop \"Rewire Your Brain\".",
     "Your attendance is confirmed.",
-    "I am happy to have you attend and honored to bring this workshop to you. The workshop will be held on March 15th, Sunday, 2026, from 2:00 pm to 6:00 pm.",
+    "I am happy to have you attend and honored to bring this workshop to you.",
+    "The workshop will be held on April 26th, 2026, Sunday, from 3:00 pm to 6:00 pm.",
     "Please do go over the following note, it will help you to be prepared for the workshop.",
     "Kindly also note: this workshop is non-transferable & non-refundable.",
     "",
-    "Please note this workshop involves prep work that you need to do. I shall be sharing that by 13th March.",
     "Prior to workshop:",
     "1. Kindly ensure the Zoom app is installed on your laptop.",
     "2. Kindly ensure that you have a steady internet connection.",
     "3. Please do not schedule anything immediately after the class, in case we need to go a little bit over the scheduled time.",
     "",
-    "March 14th (Sat) One day prior to workshop",
+    "April 25th (Friday) Prep work",
     "1. I shall send you the workbook by 9:00 am, please take a print out and keep it ready for use during the workshop.",
     "2. You will receive the zoom meeting joining id as well.",
     "",
-    "On Day of workshop - March 15th:",
+    "On Day of workshop - April 26th:",
     "1. Please do join the session 10 min prior to the starting time, so that we have time to settle in with the technology.",
     "2. It is preferred that you use headphones to listen in.",
     "3. Kindly keep a pen handy and the workbook with you at all times.",
